@@ -1,0 +1,235 @@
+---
+title: "D2 light trials"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r initializeItems}
+Gear = rep(1250,8)
+```
+
+```{r functions}
+plus <- function(Items,num) {
+  Items[sample(1:8,1)]= floor(mean(Items)) + num
+  return(Items)
+}
+```
+
+```{r test_1}
+Gear[2]
+```
+
+```{r test_2}
+for(i in 1:100) {
+Gear = plus(Gear,2)
+}
+```
+
+```{r pot_upgrade}
+Pot_upgrade <- function(Items,num) {
+  Level_base = floor(mean(Items)) + num
+  for(i in 1:8){
+    if(Items[i]<Level_base){
+      Items[i] = Level_base
+    }
+  }
+  return(Items)
+}
+```
+
+```{r pushover}
+pushover <- function(Items,num) {
+  pot_level = Pot_upgrade(Items,num)
+  j = 0
+  for(i in 1:8) {
+    cur_level = Items
+    cur_level[i]=pot_level[i]
+    if(floor(mean(cur_level))>floor(mean(Items))){
+      j = j+1
+    }
+  }
+  return(j/8)
+}
+```
+
+```{r pushoverTest}
+pushover(Gear,1)
+```
+
+```{r test_0}
+Gear[3]= 1256
+
+```
+
+```{r avg_light_increase_0}
+avg_light <- function(Items, num) {
+  pot_level = Pot_upgrade(Items,num)
+  avg_inc = 0
+  for(i in 1:8) {
+    avg_inc = avg_inc + (pot_level[i]-Items[i])
+  }
+  return(avg_inc/8)
+}
+```
+
+```{r test_avg_light}
+avg_light(Gear,0)
+pushover_desc_bound = 2
+avg_light_desc_bound = 2
+```
+
+```{r pick_drop}
+pick_drop <- function(Items, PD, AD) {
+  push_plus2 = pushover(Items,2)
+  push_plus1 = pushover(Items,1)
+  avg_plus2 = avg_light(Items,2)
+  avg_plus1 = avg_light(Items,1)
+  if(push_plus2==(PD*push_plus1)){
+    if(avg_plus2>(AD*avg_plus1)) {
+      dec = 2
+    }
+    else {
+      dec = 1
+    }
+  }
+  else if (push_plus2>(PD*push_plus1)) {
+      dec = 2
+  }
+  else {
+    dec = 1
+  }
+  return(dec)
+}  
+```
+
+```{r test_pick}
+pick_drop(Gear,2,2)
+```
+```{r one_week}
+ one_week <- function(Gear,pd,ad) { plus1_num = 4
+  plus2_num = 8
+  while(plus1_num + plus2_num > 0) {
+    if(floor(mean(Pot_upgrade(Gear,0))) > floor(mean(Gear))){
+      Gear = backfill(Gear)
+    }
+    else if(plus1_num > 0) {
+      if(pick_drop(Gear,pd,ad) == 1|plus2_num == 0) {
+        plus1_num = plus1_num - 1
+        Gear = plus(Gear,1)
+      }
+      else {
+        plus2_num = plus2_num - 1
+        Gear=plus(Gear,2)
+      }
+    }
+    else {
+      plus2_num = plus2_num - 1
+      Gear = plus(Gear,2)
+    }
+  }
+  return(Gear)
+}
+```
+
+```{r backfill}
+backfill <- function(Gear) {
+  upgrade = Pot_upgrade(Gear,0)
+  if(floor(mean(upgrade))>floor(mean(Gear))) {
+    out_Gear = upgrade 
+  }
+  else {
+    out_Gear = Gear
+  }
+  return(out_Gear)
+}
+```
+
+```{r backfillTest}
+Gear = rep(1250,8)
+Gear[1] = 1259
+Gear[2] = 1250
+backfill(Gear)
+```
+
+```{r testgear}
+avg_light_increase = rep(0,8)
+comp = rep(1250,8)
+out = rep(0,3)
+outlist = c()
+list_i = 1
+# vary by pushover decision
+for(pd in seq(0,5, by = 0.1)) {
+  # vary by average light increase decision
+  for(ad in seq(0,5, by = 0.1)) {
+    # number of trials
+    for(i in 1:100) {
+    Gear = rep(1250,8)
+    # 5 weeks
+    for (i in 1:5) {
+    Gear = one_week(Gear,pd,ad)
+    }
+    avg_light_increase = avg_light_increase + (Gear - comp)
+    }
+    avg_light_increase= avg_light_increase/100
+    total_avg = mean(avg_light_increase)
+    out[1] = pd
+    out[2] = ad
+    out[3] = total_avg
+    print(out)
+    outlist[[list_i]] = out
+    list_i = list_i + 1
+  }
+}
+
+```
+
+```{r avg_light_increase}
+avg_light_increase= avg_light_increase/10000
+```
+
+```{r test_gear}
+Gear = one_week(Gear)
+Gear
+```
+
+
+```{r heatmap}
+heatmap(outmat)
+```
+```{r outlist}
+length(outlist)
+for(i in 1:length(outlist)){
+  newlist[i] = outlist[[i]]
+}
+```
+```{r convert newlist}
+outmat = matrix(newlist, ncol = 3, byrow = TRUE)
+```
+```{r outmat}
+outmat =t(do.call("cbind",outlist))
+```
+
+2means clustering
+```{r kmeansClust}
+out_clust <- kmeans(outmat[,2:3],2)
+out_clust$cluster <- as.factor(out_clust$cluster)
+```
+
+
+```{r ploty}
+plotly::plot_ly(x= outmat[,1], y= outmat[,2], z=outmat[,3])
+```
+
+```{r test}
+runif(1)
+```
+
+`
+
+
+
+
+
